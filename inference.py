@@ -34,10 +34,23 @@ if not os.path.exists(lora_dir):
 elif os.path.islink(lora_dir):
     print(f"{lora_dir} is a symlink, skipping creation.")
 
-# Load the base FLUX model
+# Load the base FLUX model (optimized memory usage)
 model_id = "black-forest-labs/FLUX.1-dev"
-pipe = FluxPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
-pipe = pipe.to("cuda")
+
+# If already instantiated in another run, clean it up
+if "pipe" in globals():
+    del pipe
+    import gc
+    gc.collect()
+    torch.cuda.empty_cache()
+
+pipe = FluxPipeline.from_pretrained(
+    model_id,
+    torch_dtype=torch.float16,
+    device_map="balanced"  # Let HF manage memory placement
+)
+
+print(torch.cuda.memory_summary())
 
 # Global variable to track the currently loaded LoRA
 current_lora = None
